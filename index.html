@@ -37,7 +37,7 @@
                     </h1>
                 </div>
             </div>
-            <!-- Status Koneksi Database (Hanya Bulatan Sederhana) -->
+            <!-- Status Koneksi Database (Bulatan) -->
             <div class="flex items-center">
                 <span id="dbStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse transition-all duration-300" title="Menghubungkan ke Firebase..."></span>
             </div>
@@ -269,11 +269,6 @@
                 <div>
                     <label class="block text-[11px] sm:text-xs font-semibold text-slate-600 mb-1">Target Nominal (Rp)</label>
                     <input type="number" id="goalTarget" placeholder="0" required min="1"
-                        class="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-pink-100 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-pink-400 focus:outline-none text-xs sm:text-sm">
-                </div>
-                <div>
-                    <label class="block text-[11px] sm:text-xs font-semibold text-slate-600 mb-1">Dana Terkumpul Saat Ini (Rp)</label>
-                    <input type="number" id="goalCurrent" placeholder="0" min="0" required
                         class="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-pink-100 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-pink-400 focus:outline-none text-xs sm:text-sm">
                 </div>
                 <div class="flex space-x-2.5 sm:space-x-3 pt-1 sm:pt-2">
@@ -631,7 +626,9 @@
             const currentBalance = getCurrentBalance();
 
             goals.forEach(g => {
-                const currentVal = g.useDynamicBalance ? currentBalance : (g.current || 0);
+                // Selalu sync otomatis dengan saldo rekening jika useDynamicBalance !== false
+                const isDynamic = g.useDynamicBalance !== false;
+                const currentVal = isDynamic ? currentBalance : (g.current || 0);
                 const percent = Math.min(100, Math.round((currentVal / g.target) * 100));
 
                 const card = document.createElement('div');
@@ -659,9 +656,6 @@
         }
 
         window.showAddGoalModal = function() {
-            const currentBalance = getCurrentBalance();
-            document.getElementById('goalCurrent').value = currentBalance > 0 ? currentBalance : 0;
-            
             document.getElementById('goalModal').classList.remove('hidden');
             document.getElementById('goalModal').classList.add('flex');
         }
@@ -675,18 +669,19 @@
             e.preventDefault();
             const title = document.getElementById('goalTitle').value;
             const target = parseFloat(document.getElementById('goalTarget').value);
-            const current = parseFloat(document.getElementById('goalCurrent').value) || 0;
 
             if(!title || isNaN(target)) return;
 
             try {
+                // Secara default set useDynamicBalance: true agar otomatis ikuti Saldo Rekening
                 await addDoc(goalsCollection, {
                     title,
                     target,
-                    current,
-                    useDynamicBalance: false
+                    useDynamicBalance: true
                 });
                 closeAddGoalModal();
+                document.getElementById('goalTitle').value = '';
+                document.getElementById('goalTarget').value = '';
             } catch (err) {
                 alert("Gagal menyimpan target: " + err.message);
             }
